@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -6,7 +5,7 @@
   <title>Orçamento - Collins Bartenders</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Georgia', serif;
       background-color: #f4f4f4;
       padding: 40px;
       max-width: 800px;
@@ -35,13 +34,9 @@
       font-size: 14px;
     }
 
-    .checkbox-group {
-      margin-top: 10px;
-    }
-
-    .checkbox-group label {
-      font-weight: normal;
-      margin-right: 20px;
+    .radio-group label {
+      display: block;
+      margin-bottom: 5px;
     }
 
     button {
@@ -68,6 +63,11 @@
       margin-top: 20px;
       display: none;
     }
+
+    ul {
+      margin-top: 10px;
+      padding-left: 20px;
+    }
   </style>
 </head>
 <body>
@@ -80,7 +80,7 @@
     <input type="date" id="data" required>
 
     <label for="tipoEvento">Tipo de Evento:</label>
-    <input type="text" id="tipoEvento" placeholder="Casamento, Aniversário..." required>
+    <input type="text" id="tipoEvento" required>
 
     <label for="localEvento">Local do Evento:</label>
     <input type="text" id="localEvento" required>
@@ -96,10 +96,10 @@
     </select>
 
     <label>Tipo de Drinks:</label>
-    <div class="checkbox-group">
-      <label><input type="checkbox" id="alcool"> Com Álcool</label>
-      <label><input type="checkbox" id="semAlcool"> Sem Álcool</label>
-      <label><input type="checkbox" id="ambos"> Ambos</label>
+    <div class="radio-group">
+      <label><input type="radio" name="tipoDrink" value="Com Álcool"> Com Álcool</label>
+      <label><input type="radio" name="tipoDrink" value="Sem Álcool"> Sem Álcool</label>
+      <label><input type="radio" name="tipoDrink" value="Ambos"> Ambos</label>
     </div>
 
     <label for="outrasBebidas">Haverá outras bebidas no local?</label>
@@ -108,28 +108,26 @@
       <option value="Não">Não</option>
     </select>
 
-    <label for="whatsappCliente">Seu número de WhatsApp:</label>
-    <input type="text" id="whatsappCliente" placeholder="Ex: 65 91234-5678" required>
-
     <button type="button" onclick="gerarOrcamento()">Gerar Orçamento</button>
-    <button type="button" onclick="enviarWhatsApp(true)">Aceitar Proposta</button>
-    <button type="button" onclick="mostrarJustificativa()">Recusar Proposta</button>
 
     <div id="orcamentoResultado"></div>
 
+    <button type="button" onclick="enviarWhatsApp(true)">Aceitar Proposta</button>
+    <button type="button" onclick="mostrarJustificativa()">Recusar Proposta</button>
+
     <div id="justificativa-container">
       <label for="justificativa">O que podemos melhorar?</label>
-      <textarea id="justificativa" rows="4" placeholder="Digite aqui sua justificativa..."></textarea>
+      <textarea id="justificativa" rows="4"></textarea>
       <button type="button" onclick="enviarWhatsApp(false)">Enviar Justificativa</button>
     </div>
   </form>
 
   <script>
     function getTipoDrink() {
-      if (document.getElementById("ambos").checked) return "Ambos";
-      if (document.getElementById("alcool").checked && document.getElementById("semAlcool").checked) return "Ambos";
-      if (document.getElementById("alcool").checked) return "Com Álcool";
-      if (document.getElementById("semAlcool").checked) return "Sem Álcool";
+      const radios = document.getElementsByName("tipoDrink");
+      for (const radio of radios) {
+        if (radio.checked) return radio.value;
+      }
       return "Não especificado";
     }
 
@@ -142,24 +140,36 @@
       const pacote = document.getElementById("pacote").value;
       const tipoDrink = getTipoDrink();
       const outrasBebidas = document.getElementById("outrasBebidas").value;
-      const whatsappCliente = document.getElementById("whatsappCliente").value;
 
-      let valor = 0;
-
-      const tabela = {
+      const tabelaValores = {
         "Básico": [1100, 1400, 1600, 1800, 2000, 2400, 2800],
         "Padrão": [1300, 1600, 1800, 2000, 2200, 2600, 3200],
         "Premium": [1900, 2600, 2800, 3000, 3300, 3900, 4700]
       };
-
       const faixas = [30, 50, 70, 90, 110, 130, 150];
-
+      let valor = 0;
       for (let i = 0; i < faixas.length; i++) {
         if (convidados <= faixas[i]) {
-          valor = tabela[pacote][i];
+          valor = tabelaValores[pacote][i];
           break;
         }
       }
+
+      let bartenders = 1;
+      let barbacks = 0;
+
+      if (pacote === "Básico") {
+        if (convidados > 30 && convidados <= 110) bartenders = 2;
+        else if (convidados <= 130) bartenders = 3;
+        else if (convidados <= 150) bartenders = 4;
+      } else {
+        if (convidados <= 30) { bartenders = 1; barbacks = 1; }
+        else if (convidados <= 110) { bartenders = 2; barbacks = 1; }
+        else if (convidados <= 130) { bartenders = 3; barbacks = 1; }
+        else if (convidados <= 150) { bartenders = 4; barbacks = 2; }
+      }
+
+      const copos = (pacote === "Básico") ? "Copos descartáveis" : "Copos/taças de vidro e canecas";
 
       const resultado = `
         <h3>Orçamento Gerado:</h3>
@@ -167,12 +177,18 @@
         <p><strong>Data:</strong> ${data}</p>
         <p><strong>Tipo de Evento:</strong> ${tipoEvento}</p>
         <p><strong>Local do Evento:</strong> ${localEvento}</p>
-        <p><strong>Convidados:</strong> ${convidados}</p>
+        <p><strong>Número de Convidados:</strong> ${convidados}</p>
         <p><strong>Pacote:</strong> ${pacote}</p>
         <p><strong>Tipo de Drinks:</strong> ${tipoDrink}</p>
         <p><strong>Outras bebidas no local:</strong> ${outrasBebidas}</p>
-        <p><strong>Valor do Orçamento:</strong> R$ ${valor.toFixed(2).replace('.', ',')}</p>
-        <p><strong>WhatsApp:</strong> ${whatsappCliente}</p>
+        <p><strong>Valor:</strong> R$ ${valor.toFixed(2).replace('.', ',')}</p>
+        <ul>
+          <li>Até 8 drinks</li>
+          <li>4 horas Open Bar</li>
+          <li>${bartenders} Bartender(s)</li>
+          ${barbacks > 0 ? `<li>${barbacks} Barback(s)</li>` : ''}
+          <li>${copos}</li>
+        </ul>
       `;
 
       document.getElementById("orcamentoResultado").innerHTML = resultado;
@@ -180,48 +196,9 @@
     }
 
     function montarMensagem() {
-      const nome = document.getElementById("nome").value;
-      const data = document.getElementById("data").value;
-      const tipoEvento = document.getElementById("tipoEvento").value;
-      const localEvento = document.getElementById("localEvento").value;
-      const convidados = document.getElementById("convidados").value;
-      const pacote = document.getElementById("pacote").value;
-      const tipoDrink = getTipoDrink();
-      const outrasBebidas = document.getElementById("outrasBebidas").value;
-      const whatsappCliente = document.getElementById("whatsappCliente").value;
       const justificativa = document.getElementById("justificativa").value;
-
-      let valor = 0;
-      const tabela = {
-        "Básico": [1100, 1400, 1600, 1800, 2000, 2400, 2800],
-        "Padrão": [1300, 1600, 1800, 2000, 2200, 2600, 3200],
-        "Premium": [1900, 2600, 2800, 3000, 3300, 3900, 4700]
-      };
-      const faixas = [30, 50, 70, 90, 110, 130, 150];
-      for (let i = 0; i < faixas.length; i++) {
-        if (convidados <= faixas[i]) {
-          valor = tabela[pacote][i];
-          break;
-        }
-      }
-
-      let mensagem = "Olá! Recebi uma solicitação de orçamento:\n\n";
-      mensagem += `Nome: ${nome}\n`;
-      mensagem += `Data do Evento: ${data}\n`;
-      mensagem += `Tipo de Evento: ${tipoEvento}\n`;
-      mensagem += `Local do Evento: ${localEvento}\n`;
-      mensagem += `Convidados: ${convidados}\n`;
-      mensagem += `Pacote: ${pacote}\n`;
-      mensagem += `Tipo de Drinks: ${tipoDrink}\n`;
-      mensagem += `Outras bebidas no local: ${outrasBebidas}\n`;
-      mensagem += `WhatsApp do cliente: ${whatsappCliente}\n`;
-      mensagem += `Valor: R$ ${valor.toFixed(2).replace('.', ',')}\n`;
-
-      if (justificativa) {
-        mensagem += `\nMotivo da recusa: ${justificativa}`;
-      }
-
-      return encodeURIComponent(mensagem);
+      const texto = document.getElementById("orcamentoResultado").innerText;
+      return encodeURIComponent(justificativa ? texto + "\n\nMotivo da recusa: " + justificativa : texto);
     }
 
     function enviarWhatsApp(aceito) {
